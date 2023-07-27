@@ -1,0 +1,135 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
+
+type TrieNode struct {
+	children    map[rune]*TrieNode
+	isEndOfWord bool
+}
+
+type Trie struct {
+	root *TrieNode
+}
+
+func NewTrie() *Trie {
+	return &Trie{
+		root: &TrieNode{
+			children: make(map[rune]*TrieNode),
+		},
+	}
+}
+
+func (t *Trie) Insert(word string) {
+	node := t.root
+	for _, char := range word {
+		if _, ok := node.children[char]; !ok {
+			node.children[char] = &TrieNode{
+				children: make(map[rune]*TrieNode),
+			}
+		}
+		node = node.children[char]
+	}
+	node.isEndOfWord = true
+}
+
+func (t *Trie) Search(word string) bool {
+	node := t.root
+	for _, char := range word {
+		if _, ok := node.children[char]; !ok {
+			return false
+		}
+		node = node.children[char]
+	}
+	return node.isEndOfWord
+}
+
+func FilterData(data []string, trie *Trie) []string {
+	var filteredData []string
+	for _, line := range data {
+		words := strings.Fields(line)
+		matched := false
+		for _, word := range words {
+			if trie.Search(word) {
+				matched = true
+				break
+			}
+		}
+		if matched {
+			filteredData = append(filteredData, line)
+		}
+	}
+	return filteredData
+}
+
+func main() {
+
+	// 构建前缀树
+
+	trie := NewTrie()
+
+	fmt.Println("请输入想要提取的关键字：")
+	key := ""
+	fmt.Scanln(&key)
+	switch key {
+	case "肯德基":
+		brandKeywords := []string{"肯德基", "麦辣鸡腿堡", "买一送一"}
+		for _, keyword := range brandKeywords {
+			trie.Insert(keyword)
+		}
+	case "汉堡王":
+		brandKeywords := []string{"汉堡王", "汉", "堡", "狠霸王牛堡", "美味无限"}
+		for _, keyword := range brandKeywords {
+			trie.Insert(keyword)
+		}
+	case "麦当劳":
+		brandKeywords := []string{"麦", "当", "劳", "1112331", "香浓咖啡", "无限续杯"}
+		for _, keyword := range brandKeywords {
+			trie.Insert(keyword)
+		}
+	default:
+		fmt.Println("输入错误")
+
+	}
+
+	filePath := "e:/efg.txt"
+	file02, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Println("open file err=", err)
+		return
+	}
+	//及时关闭file句柄
+	defer file02.Close()
+
+	//输入数据
+	inputData := []string{
+		"肯德基麦辣鸡腿堡 买一送一",
+		"肯德基麦辣鸡腿堡 买一送一",
+		"肯德基麦辣鸡腿堡 买一送一",
+		"肯德基麦辣鸡腿堡 买一送一",
+		"肯德基麦辣鸡腿堡 买一送一",
+		"麦 1 当 1 劳 1112331 香浓咖啡 无限续杯",
+		"麦 1 当 1 劳 1112331 香浓咖啡 无限续杯",
+		"麦 1 当 1 劳 1112331 香浓咖啡 无限续杯",
+		"麦 1 当 1 劳 1112331 香浓咖啡 无限续杯",
+		"{汉}[堡](王)狠霸王牛堡 美味无限",
+		"其他数据不保留",
+		"麦当劳",
+	}
+
+	//过滤数据
+	filteredData := FilterData(inputData, trie)
+	write := bufio.NewWriter(file02)
+	fmt.Println(filteredData)
+
+	for _, val := range filteredData {
+		write.WriteString(val + "\n")
+
+	}
+
+	write.Flush()
+}
